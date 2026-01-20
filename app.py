@@ -109,8 +109,8 @@ with tab1:
     # Pie chart for product distribution
     col1, col2 = st.columns(2)
     with col1:
-        product_dist = df_filtered.groupby('Product')['Sales'].sum().reset_index()
-        fig_pie = px.pie(product_dist, values='Sales', names='Product', title='Transaction Volume by Product')
+        product_dist = df_filtered.groupby('Product')['Amount'].sum().reset_index()
+        fig_pie = px.pie(product_dist, values='Amount', names='Product', title='Transaction Volume by Type')
         st.plotly_chart(fig_pie, width='stretch')
     
     with col2:
