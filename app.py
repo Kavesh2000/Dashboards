@@ -42,12 +42,30 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Connect to the database
+@st.cache_data
 def load_data():
-    import sqlite3
-    conn = sqlite3.connect('sample_data.db')
-    df_sales = pd.read_sql("SELECT * FROM sales", conn)
-    df_agg = pd.read_sql("SELECT * FROM aggregated_sales", conn)
-    conn.close()
+    try:
+        import sqlite3
+        conn = sqlite3.connect('sample_data.db')
+        df_sales = pd.read_sql("SELECT * FROM sales", conn)
+        df_agg = pd.read_sql("SELECT * FROM aggregated_sales", conn)
+        conn.close()
+    except Exception as e:
+        # Fallback: generate sample data if database fails
+        st.warning("Database not available, using generated sample data.")
+        np.random.seed(42)
+        n_transactions = 500
+        data = {
+            'Date': pd.date_range('2023-01-01', periods=n_transactions, freq='D'),
+            'Product': np.random.choice(['Deposits', 'Loan Disbursements', 'Loan Repayments', 'Savings', 'Withdrawals'], n_transactions),
+            'Amount': np.random.uniform(50, 5000, n_transactions).round(2),
+            'Region': np.random.choice(['North Branch', 'South Branch', 'East Branch', 'West Branch'], n_transactions),
+            'Customer_ID': np.random.randint(1000, 9999, n_transactions)
+        }
+        df_sales = pd.DataFrame(data)
+        df_agg = df_sales.groupby(['Product', 'Region'])['Amount'].sum().reset_index()
+        df_agg.rename(columns={'Amount': 'Total_Amount'}, inplace=True)
+    
     return df_sales, df_agg
 
 df_sales, df_agg = load_data()
