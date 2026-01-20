@@ -45,8 +45,9 @@ st.markdown("""
 @st.cache_data
 def load_data():
     engine = sa.create_engine('sqlite:///sample_data.db')
-    df_sales = pd.read_sql("SELECT * FROM sales", engine)
-    df_agg = pd.read_sql("SELECT * FROM aggregated_sales", engine)
+    with engine.connect() as conn:
+        df_sales = pd.read_sql("SELECT * FROM sales", conn)
+        df_agg = pd.read_sql("SELECT * FROM aggregated_sales", conn)
     return df_sales, df_agg
 
 df_sales, df_agg = load_data()
