@@ -42,12 +42,12 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Connect to the database
-@st.cache_data
 def load_data():
-    engine = sa.create_engine('sqlite:///sample_data.db')
-    with engine.connect() as conn:
-        df_sales = pd.read_sql("SELECT * FROM sales", conn)
-        df_agg = pd.read_sql("SELECT * FROM aggregated_sales", conn)
+    import sqlite3
+    conn = sqlite3.connect('sample_data.db')
+    df_sales = pd.read_sql("SELECT * FROM sales", conn)
+    df_agg = pd.read_sql("SELECT * FROM aggregated_sales", conn)
+    conn.close()
     return df_sales, df_agg
 
 df_sales, df_agg = load_data()
@@ -70,14 +70,14 @@ else:
     df_filtered = df_sales
 
 # Product filter
-products = st.sidebar.multiselect("Select Products", df_sales['Product'].unique(), default=df_sales['Product'].unique())
-if products:
-    df_filtered = df_filtered[df_filtered['Product'].isin(products)]
+transaction_types = st.sidebar.multiselect("Select Transaction Types", df_sales['Product'].unique(), default=df_sales['Product'].unique())
+if transaction_types:
+    df_filtered = df_filtered[df_filtered['Product'].isin(transaction_types)]
 
 # Region filter
-regions = st.sidebar.multiselect("Select Regions", df_sales['Region'].unique(), default=df_sales['Region'].unique())
-if regions:
-    df_filtered = df_filtered[df_filtered['Region'].isin(regions)]
+branches = st.sidebar.multiselect("Select Branches", df_sales['Region'].unique(), default=df_sales['Region'].unique())
+if branches:
+    df_filtered = df_filtered[df_filtered['Region'].isin(branches)]
 
 # Main title
 st.markdown('<h1 class="main-header">🏦 Advanced Banking Transaction Dashboard</h1>', unsafe_allow_html=True)
@@ -111,12 +111,17 @@ with tab1:
     with col1:
         product_dist = df_filtered.groupby('Product')['Sales'].sum().reset_index()
         fig_pie = px.pie(product_dist, values='Sales', names='Product', title='Transaction Volume by Product')
-        st.plotly_chart(fig_pie, use_container_width=True)
+        st.plotly_chart(fig_pie, width='stretch')
     
     with col2:
-        region_dist = df_filtered.groupby('Region')['Sales'].sum().reset_index()
-        fig_bar_region = px.bar(region_dist, x='Region', y='Sales', title='Transaction Volume by Region', color='Region')
-        st.plotly_chart(fig_bar_region, use_container_width=True)
+        region_dist = df_filtered.groupby('Region')['Amount'].sum().reset_index()
+        fig_bar_region = px.bar(region_dist, x='Region', y='Amount', title='Transaction Volume by Branch', color='Region')
+        st.plotly_chart(fig_bar_region, width='stretch')
+    
+    # Additional chart: Transaction amount distribution
+    st.subheader("Transaction Amount Distribution")
+    fig_hist = px.histogram(df_filtered, x='Amount', nbins=50, title='Distribution of Transaction Amounts')
+    st.plotly_chart(fig_hist, width='stretch')
 
 with tab2:
     st.header("Trends & Analytics")
@@ -124,13 +129,13 @@ with tab2:
     # Sales over time
     fig_line = px.line(df_filtered, x='Date', y='Sales', color='Product', title='Transaction Trends Over Time')
     fig_line.update_layout(xaxis_title="Date", yaxis_title="Transaction Amount ($)")
-    st.plotly_chart(fig_line, use_container_width=True)
+    st.plotly_chart(fig_line, width='stretch')
     
     # Monthly aggregation
-    df_monthly = df_filtered.groupby(df_filtered['Date'].dt.to_period('M'))['Sales'].sum().reset_index()
+    df_monthly = df_filtered.groupby(df_filtered['Date'].dt.to_period('M'))['Amount'].sum().reset_index()
     df_monthly['Date'] = df_monthly['Date'].astype(str)
-    fig_monthly = px.bar(df_monthly, x='Date', y='Sales', title='Monthly Transaction Volume')
-    st.plotly_chart(fig_monthly, use_container_width=True)
+    fig_monthly = px.bar(df_monthly, x='Date', y='Amount', title='Monthly Transaction Volume')
+    st.plotly_chart(fig_monthly, width='stretch')
 
 with tab3:
     st.header("Predictive Analytics: Transaction Forecasting")
@@ -139,8 +144,8 @@ with tab3:
     df_ml = df_filtered.copy()
     df_ml['Days'] = (df_ml['Date'] - df_ml['Date'].min()).dt.days
     
-    X = df_ml[['Days']]
-    y = df_ml['Sales']
+    X = df_ml['Days'].values.reshape(-1, 1)
+    y = df_ml['Amount']
     
     model = LinearRegression()
     model.fit(X, y)
@@ -150,20 +155,20 @@ with tab3:
     predictions = model.predict(future_days)
     
     future_dates = pd.date_range(df_ml['Date'].max() + pd.Timedelta(days=1), periods=30)
-    pred_df = pd.DataFrame({'Date': future_dates, 'Predicted_Transactions': predictions})
+    pred_df = pd.DataFrame({'Date': future_dates, 'Predicted_Amount': predictions})
     
     st.write("**Forecasting Model**: Linear Regression trained on historical transaction data.")
     st.dataframe(pred_df.head(10))
     
     # Combined historical and predicted
     combined_df = pd.concat([
-        df_ml[['Date', 'Sales']].rename(columns={'Sales': 'Amount'}),
-        pred_df.rename(columns={'Predicted_Transactions': 'Amount'})
+        df_ml[['Date', 'Amount']].rename(columns={'Amount': 'Value'}),
+        pred_df.rename(columns={'Predicted_Amount': 'Value'})
     ])
     combined_df['Type'] = ['Historical'] * len(df_ml) + ['Predicted'] * len(pred_df)
     
-    fig_forecast = px.line(combined_df, x='Date', y='Amount', color='Type', title='Historical vs Predicted Transactions')
-    st.plotly_chart(fig_forecast, use_container_width=True)
+    fig_forecast = px.line(combined_df, x='Date', y='Value', color='Type', title='Historical vs Predicted Transactions')
+    st.plotly_chart(fig_forecast, width='stretch')
 
 with tab4:
     st.header("Detailed Transaction Data")
@@ -174,7 +179,7 @@ with tab4:
     
     # Raw data with pagination
     st.subheader("Raw Transaction Data")
-    st.dataframe(df_filtered, use_container_width=True)
+    st.dataframe(df_filtered)
     
     # Download button
     csv = df_filtered.to_csv(index=False)
