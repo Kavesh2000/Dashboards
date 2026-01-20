@@ -12,8 +12,8 @@ df['Month'] = df['Date'].dt.month
 df['Day'] = df['Date'].dt.day
 
 # Aggregate data
-aggregated_df = df.groupby(['Product', 'Region'])['Sales'].sum().reset_index()
-aggregated_df.rename(columns={'Sales': 'Total_Sales'}, inplace=True)
+aggregated_df = df.groupby(['Product', 'Region'])['Amount'].sum().reset_index()
+aggregated_df.rename(columns={'Amount': 'Total_Amount'}, inplace=True)
 
 # Load back to SQL
 aggregated_df.to_sql('aggregated_sales', conn, if_exists='replace', index=False)
