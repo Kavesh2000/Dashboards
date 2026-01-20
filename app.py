@@ -89,13 +89,13 @@ with col1:
     total_transactions = len(df_filtered)
     st.metric("Total Transactions", f"{total_transactions:,}")
 with col2:
-    total_volume = df_filtered['Sales'].sum()
+    total_volume = df_filtered['Amount'].sum()
     st.metric("Total Transaction Volume", f"${total_volume:,.0f}")
 with col3:
-    avg_transaction = df_filtered['Sales'].mean()
+    avg_transaction = df_filtered['Amount'].mean()
     st.metric("Average Transaction", f"${avg_transaction:.2f}")
 with col4:
-    growth_rate = ((df_filtered.groupby(df_filtered['Date'].dt.to_period('M'))['Sales'].sum().pct_change().mean()) * 100)
+    growth_rate = ((df_filtered.groupby(df_filtered['Date'].dt.to_period('M'))['Amount'].sum().pct_change().mean()) * 100)
     st.metric("Monthly Growth Rate", f"{growth_rate:.2f}%")
 
 st.markdown("---")
@@ -126,8 +126,8 @@ with tab1:
 with tab2:
     st.header("Trends & Analytics")
     
-    # Sales over time
-    fig_line = px.line(df_filtered, x='Date', y='Sales', color='Product', title='Transaction Trends Over Time')
+    # Transaction over time
+    fig_line = px.line(df_filtered, x='Date', y='Amount', color='Product', title='Transaction Trends Over Time')
     fig_line.update_layout(xaxis_title="Date", yaxis_title="Transaction Amount ($)")
     st.plotly_chart(fig_line, width='stretch')
     
